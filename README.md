@@ -8,20 +8,24 @@ Open `index.html` in any browser. That's it — no server needed.
 
 ## How to Use
 
-1. **Select the tax year** from the dropdown. This loads the UVT and SMLV values for that year from `config.json`.
+1. **Select the tax year** from the dropdown. UVT, SMLV, and other tax parameters for that year are shown in the info bar below the inputs.
 
-2. **Enter your monthly salary** (base salary before any deductions). The app formats it automatically with thousand separators.
+2. **Enter your monthly salary** (base salary before any deductions). The app formats it automatically with thousand separators and shows the equivalent in UVT/month.
 
-3. **Read the comparison cards.** Each card shows one tax planning strategy with its key metrics:
+3. **Pick a strategy** from the **Estrategia** dropdown to focus on a single card. By default the app opens with *Sin planificación* selected.
+
+4. **Add a comparison** using the **Comparar con** dropdown to see a second strategy side by side. By default *Máxima planificación* is pre-selected here. Leave it on *Sin comparación* to see just one card, or clear both dropdowns to see all 7 strategies at once.
+
+5. **Each card shows:**
    - **Retefuente mensual** — the ideal monthly withholding tax.
    - **Tasa efectiva** — withholding as a percentage of your salary.
    - **Impuesto anual** — total income tax for the year.
    - **Neto mensual** — take-home pay after tax and social security.
    - **Ahorro vs sin planificación** — how much you save compared to doing nothing.
 
-4. **Look for the green badge** (✦ Menor carga) — it marks the strategy with the lowest tax burden.
+6. **Look for the green badge** (✦ Menor carga) — it marks the strategy with the lowest tax burden across all 7, regardless of which ones are currently visible.
 
-5. **Click "Ver detalle"** on any card to see the full calculation breakdown: income components, social security, exemptions, caps applied, and final taxable income.
+7. **Click "Ver detalle"** on any card to see the full calculation breakdown: income components, social security, exemptions, caps applied, and final taxable income.
 
 ## Strategies Explained
 
@@ -37,7 +41,7 @@ Open `index.html` in any browser. That's it — no server needed.
 
 ## Editing Tax Parameters
 
-All tax tables, caps, and rates live in `config.js`. No code changes needed for:
+All tax tables, caps, rates, UVT, and SMLV values live in `config.js` — they are read-only in the UI. No code changes needed for:
 
 ### Updating UVT or SMLV for a new year
 

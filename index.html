@@ -155,6 +155,15 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 
+  .comparison-grid[data-mode="single"] {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+
+  .comparison-grid[data-mode="compare"] {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .strategy-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -569,15 +578,21 @@ function renderApp(config) {
         <input type="text" id="inp-salario" value="10,000,000" inputmode="numeric">
         <div class="hint" id="salario-hint"></div>
       </div>
-      <div class="field">
-        <label>UVT</label>
-        <input type="text" id="inp-uvt" value="" readonly>
-        <div class="hint">Valor de config.js</div>
-      </div>
-      <div class="field">
-        <label>SMLV</label>
-        <input type="text" id="inp-smlv" value="" readonly>
-        <div class="hint">Valor de config.js</div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <div class="field">
+          <label>Estrategia</label>
+          <select id="inp-estrategia-primary">
+            <option value="">Todas las estrategias</option>
+            ${ESTRATEGIAS.map(e => `<option value="${e.id}" ${e.id === 'sin_plan' ? 'selected' : ''}>${e.nombre}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Comparar con</label>
+          <select id="inp-estrategia-compare">
+            <option value="">Sin comparación</option>
+            ${ESTRATEGIAS.map(e => `<option value="${e.id}" ${e.id === 'max_plan' ? 'selected' : ''}>${e.nombre}</option>`).join('')}
+          </select>
+        </div>
       </div>
     </div>
 
@@ -591,8 +606,8 @@ function renderApp(config) {
 
   const inpAno = document.getElementById('inp-ano');
   const inpSalario = document.getElementById('inp-salario');
-  const inpUVT = document.getElementById('inp-uvt');
-  const inpSMLV = document.getElementById('inp-smlv');
+  const selPrimary = document.getElementById('inp-estrategia-primary');
+  const selCompare = document.getElementById('inp-estrategia-compare');
 
   function parseSalario(str) {
     return parseInt(str.replace(/[^0-9]/g, ''), 10) || 0;
@@ -614,15 +629,20 @@ function renderApp(config) {
     const smlv = anoConfig.smlv;
     const salario = parseSalario(inpSalario.value);
 
-    inpUVT.value = fmt(uvt);
-    inpSMLV.value = fmt(smlv);
-
     document.getElementById('salario-hint').textContent =
       salario > 0 ? `= ${(salario / uvt).toFixed(1)} UVT/mes` : '';
 
     // Parámetros derivados
     const paramsRow = document.getElementById('params-row');
     paramsRow.innerHTML = `
+      <div class="param">
+        <span class="param-label">UVT:</span>
+        <span class="param-value">${fmt(uvt)}</span>
+      </div>
+      <div class="param">
+        <span class="param-label">SMLV:</span>
+        <span class="param-value">${fmt(smlv)}</span>
+      </div>
       <div class="param">
         <span class="param-label">Estatuto:</span>
         <span class="param-value">${anoConfig.estatuto}</span>
@@ -663,9 +683,17 @@ function renderApp(config) {
       }
     }
 
-    // Render cards
+    // Filter by selected strategies
+    const selected = [selPrimary.value, selCompare.value].filter(Boolean);
+    const toRender = selected.length > 0
+      ? resultados.filter(e => selected.includes(e.id))
+      : resultados;
+
+    const mode = selected.length === 2 ? 'compare' : selected.length === 1 ? 'single' : 'all';
     const grid = document.getElementById('results-grid');
-    grid.innerHTML = resultados.map(e => {
+    grid.setAttribute('data-mode', mode);
+
+    grid.innerHTML = toRender.map(e => {
       const r = e.resultado;
       const isBest = e.id === mejorId;
       const sinPlanImpuesto = resultados[0].resultado.impuesto;
@@ -729,8 +757,21 @@ function renderApp(config) {
     }).join('');
   }
 
+  function syncSelectors() {
+    const pVal = selPrimary.value;
+    const cVal = selCompare.value;
+    for (const opt of selCompare.options) {
+      opt.disabled = opt.value !== '' && opt.value === pVal;
+    }
+    for (const opt of selPrimary.options) {
+      opt.disabled = opt.value !== '' && opt.value === cVal;
+    }
+  }
+
   // Event listeners
   inpAno.addEventListener('change', recalcular);
+  selPrimary.addEventListener('change', () => { syncSelectors(); recalcular(); });
+  selCompare.addEventListener('change', () => { syncSelectors(); recalcular(); });
   inpSalario.addEventListener('input', function() {
     const pos = this.selectionStart;
     const oldLen = this.value.length;
@@ -744,6 +785,7 @@ function renderApp(config) {
   });
 
   // Initial render
+  syncSelectors();
   recalcular();
 }
 
