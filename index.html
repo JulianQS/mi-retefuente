@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Retefuente — Planificación Tributaria Colombia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0f14;
+    --surface: #151921;
+    --surface-2: #1c2230;
+    --border: #2a3142;
+    --text: #e2e6ed;
+    --text-muted: #8490a5;
+    --accent: #4fc3f7;
+    --accent-dim: #1a3a4d;
+    --green: #66bb6a;
+    --green-dim: #1a3d1c;
+    --yellow: #ffd54f;
+    --red: #ef5350;
+    --orange: #ffa726;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  header p {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+
+  /* --- Inputs panel --- */
+  .inputs-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--accent);
+  }
+
+  .field .hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* --- Params row --- */
+  .params-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+
+  .params-row .param {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .params-row .param-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+  }
+
+  .params-row .param-value {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 0.85rem;
+  }
+
+  /* --- Results --- */
+  .results-section h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+  }
+
+  .comparison-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  .strategy-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: border-color 0.25s;
+    position: relative;
+  }
+
+  .strategy-card:hover { border-color: var(--accent); }
+
+  .strategy-card.best {
+    border-color: var(--green);
+    box-shadow: 0 0 20px rgba(102, 187, 106, 0.08);
+  }
+
+  .strategy-card.best::after {
+    content: '✦ Menor carga';
+    position: absolute;
+    top: -0.6rem;
+    right: 1rem;
+    background: var(--green);
+    color: #111;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .card-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .card-subtitle {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  .card-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1rem;
+  }
+
+  .metric {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .metric-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .metric-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .metric-value.highlight { color: var(--accent); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.warn { color: var(--orange); }
+
+  .card-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0.75rem 0;
+  }
+
+  /* --- Detail table --- */
+  .detail-toggle {
+    margin-top: 0.75rem;
+    font-size: 0.7rem;
+    color: var(--accent);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .detail-table {
+    display: none;
+    margin-top: 0.5rem;
+  }
+
+  .detail-table.open { display: block; }
+
+  .detail-table table {
+    width: 100%;
+    font-size: 0.72rem;
+    border-collapse: collapse;
+  }
+
+  .detail-table td {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-table td:last-child {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+  }
+
+  .detail-table tr.subtotal td {
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+  }
+
+  @media (max-width: 640px) {
+    .inputs-panel { grid-template-columns: 1fr 1fr; }
+    .comparison-grid { grid-template-columns: 1fr; }
+    .params-row { flex-direction: column; gap: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Mi <span>Retefuente</span></h1>
+    <p>Comparador de estrategias de planificación tributaria — Retención en la fuente e impuesto de renta, Colombia</p>
+  </header>
+
+  <div id="app"></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ============================================================
+//  MOTOR DE CÁLCULO TRIBUTARIO
+// ============================================================
+
+/**
+ * Calcula componentes de ingreso anual
+ */
+function calcularIngresos(salarioMensual, topes) {
+  const salarioAnual = 12 * salarioMensual;
+  const prima = salarioMensual;                           // 1 mes
+  const cesantias = salarioMensual * topes.factor_cesantias; // salario × 1.12
+  const total = salarioAnual + prima + cesantias;
+  return { salarioMensual, salarioAnual, prima, cesantias, total };
+}
+
+/**
+ * Calcula aportes a seguridad social del empleado (anual)
+ *  - Salud + Pensión: 8% sobre base (tope 25 SMLV)
+ *  - Solidaridad pensional: escalonado según salario vs SMLV
+ */
+function calcularSegSocial(salarioMensual, smlv, topes, solidaridad) {
+  // Salud + Pensión (empleado: 4% salud + 4% pensión = 8%)
+  const baseMensual = Math.min(salarioMensual, topes.base_max_cotizacion_smlv * smlv);
+  const saludPension = topes.aporte_salud_pension_empleado_pct * 12 * baseMensual;
+
+  // Fondo de Solidaridad Pensional
+  let solidaridadMensual = 0;
+  if (salarioMensual >= solidaridad.umbral_aplica_smlv * smlv) {
+    if (salarioMensual < solidaridad.umbral_tarifa_alta_smlv * smlv) {
+      solidaridadMensual = solidaridad.tarifa_baja * salarioMensual;
+    } else {
+      solidaridadMensual = Math.min(
+        solidaridad.tarifa_alta * salarioMensual,
+        solidaridad.tope_maximo_factor_smlv * smlv
+      );
+    }
+  }
+  const solidaridadAnual = 12 * solidaridadMensual;
+
+  return {
+    saludPension,
+    solidaridad: solidaridadAnual,
+    total: saludPension + solidaridadAnual
+  };
+}
+
+/**
+ * Calcula impuesto de renta por tabla de rangos marginales
+ */
+function calcularImpuestoRenta(rentaLiquidaGravable, tablaRenta, uvt) {
+  let impuesto = 0;
+  const rl = rentaLiquidaGravable;
+
+  for (const rango of tablaRenta) {
+    const limInf = rango.desde_uvt * uvt;
+    const limSup = rango.hasta_uvt !== null ? rango.hasta_uvt * uvt : Infinity;
+
+    if (rl <= limInf) break;
+
+    const baseGravable = Math.min(rl, limSup) - limInf;
+    impuesto += baseGravable * rango.tarifa;
+  }
+
+  return impuesto;
+}
+
+/**
+ * Calcula el flujo completo para una estrategia dada.
+ *
+ * Parámetros de estrategia:
+ *   - usaAportesVoluntarios: boolean
+ *   - nDependientes: 0, 1, 2
+ *   - usaSaludPrepagada: boolean
+ */
+function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
+  const { topes, solidaridad: solConfig, tabla_renta: tablaRenta } = estatuto;
+  const { deduccion_dependientes: depConfig, deduccion_medicina_prepagada: saludConfig } = estatuto;
+  const { aporte_voluntario_pension_afc: afcConfig } = estatuto;
+
+  // 1. Ingresos
+  const ingresos = calcularIngresos(salarioMensual, topes);
+
+  // 2. Seguridad Social
+  const segSocial = calcularSegSocial(salarioMensual, smlv, topes, solConfig);
+
+  // 3. Renta Líquida 1 (ingreso neto de seguridad social)
+  const rl1 = ingresos.total - segSocial.total;
+
+  // 4. Límite global de rentas exentas + deducciones
+  const limiteExentas40 = topes.limite_rentas_exentas_pct * rl1;
+
+  // 5. Rentas exentas según estrategia
+  //    - Cesantías siempre presentes
+  //    - Aportes voluntarios (AFC / pensión voluntaria) hasta % de ingreso bruto
+  //    - La base de rentas exentas es el MAYOR entre cesantías solas y el total con voluntarios
+  let rentasExentas = ingresos.cesantias; // base: solo cesantías
+
+  if (estrategia.usaAportesVoluntarios) {
+    const maxVoluntario = afcConfig.pct_maximo_ingreso * rl1;
+    // Los aportes voluntarios INCLUYEN las cesantías en el bucket de rentas exentas
+    // El total del bucket es hasta el % máximo de RL1
+    rentasExentas = Math.max(rentasExentas, maxVoluntario);
+  }
+
+  // 6. Deducciones adicionales: dependientes
+  let deduccionDependientes = 0;
+  const nDep = Math.min(estrategia.nDependientes || 0, topes.max_dependientes);
+  if (nDep > 0 && depConfig) {
+    const topePorDepAnual = depConfig.tope_mensual_uvt_por_dependiente * 12 * uvt;
+    const deduccionPorDep = Math.min(
+      depConfig.pct_ingreso_por_dependiente * ingresos.total,
+      topePorDepAnual
+    );
+    deduccionDependientes = nDep * deduccionPorDep;
+  }
+
+  // 7. Deducción medicina prepagada / salud voluntaria
+  let deduccionSalud = 0;
+  if (estrategia.usaSaludPrepagada && saludConfig) {
+    deduccionSalud = saludConfig.tope_mensual_uvt * 12 * uvt;
+  }
+
+  // 8. Total rentas exentas brutas (antes de límites)
+  const totalExentasBrutas = rentasExentas + deduccionDependientes + deduccionSalud;
+
+  // 9. Renta Líquida 2 (para calcular el 25% exento)
+  const rl2 = rl1 - totalExentasBrutas;
+
+  // 10. 25% exento adicional (sobre RL2, con tope en UVT)
+  const exento25Bruto = topes.factor_exento_25pct * Math.max(rl2, 0);
+  const tope25UVT = topes.exento_25pct_tope_uvt * uvt;
+  const exento25 = Math.min(exento25Bruto, tope25UVT);
+
+  // 11. Total rentas exentas + deducciones (antes de caps globales)
+  let totalExentasConPct = totalExentasBrutas + exento25;
+
+  // 12. Aplicar límite del 40% de RL1
+  totalExentasConPct = Math.min(totalExentasConPct, limiteExentas40);
+
+  // 13. Aplicar tope en UVT (con adición por dependientes)
+  const topeUVT = (topes.total_rentas_exentas_uvt + nDep * topes.uvt_adicional_por_dependiente) * uvt;
+  const totalExentasFinal = Math.min(totalExentasConPct, topeUVT);
+
+  // 14. Renta Líquida Gravable
+  const rlGravable = Math.max(rl1 - totalExentasFinal, 0);
+
+  // 15. Impuesto de renta
+  const impuesto = calcularImpuestoRenta(rlGravable, tablaRenta, uvt);
+
+  // 16. Retención en la fuente mensual ideal
+  const retefuenteMensual = impuesto / 12;
+
+  // 17. Tasa efectiva de retención
+  const tasaEfectiva = salarioMensual > 0 ? retefuenteMensual / salarioMensual : 0;
+
+  // 18. Ingreso neto mensual (salario - retención - seguridad social mensual)
+  const segSocialMensual = segSocial.total / 12;
+  const netoMensual = salarioMensual - retefuenteMensual - segSocialMensual;
+
+  return {
+    ingresos,
+    segSocial,
+    rl1,
+    limiteExentas40,
+    rentasExentas,
+    deduccionDependientes,
+    deduccionSalud,
+    totalExentasBrutas,
+    rl2: Math.max(rl2, 0),
+    exento25Bruto,
+    exento25,
+    totalExentasConPct: Math.min(totalExentasBrutas + exento25, limiteExentas40),
+    topeUVT,
+    totalExentasFinal,
+    rlGravable,
+    impuesto,
+    retefuenteMensual,
+    tasaEfectiva,
+    netoMensual,
+    nDep
+  };
+}
+
+
+// ============================================================
+//  DEFINICIÓN DE ESTRATEGIAS (presets)
+// ============================================================
+
+const ESTRATEGIAS = [
+  {
+    id: 'sin_plan',
+    nombre: 'Sin planificación',
+    descripcion: 'Solo cesantías como renta exenta — sin aportes voluntarios ni deducciones',
+    params: { usaAportesVoluntarios: false, nDependientes: 0, usaSaludPrepagada: false }
+  },
+  {
+    id: 'max_plan',
+    nombre: 'Máxima planificación',
+    descripcion: 'Aportes voluntarios AFC/pensión maximizados al tope permitido',
+    params: { usaAportesVoluntarios: true, nDependientes: 0, usaSaludPrepagada: false }
+  },
+  {
+    id: 'hijo1',
+    nombre: '1 hijo',
+    descripcion: 'Aportes voluntarios + deducción por 1 dependiente',
+    params: { usaAportesVoluntarios: true, nDependientes: 1, usaSaludPrepagada: false }
+  },
+  {
+    id: 'hijo1_salud',
+    nombre: '1 hijo + salud',
+    descripcion: 'Aportes voluntarios + 1 dependiente + medicina prepagada',
+    params: { usaAportesVoluntarios: true, nDependientes: 1, usaSaludPrepagada: true }
+  },
+  {
+    id: 'hijo2',
+    nombre: '2 hijos',
+    descripcion: 'Aportes voluntarios + deducción por 2 dependientes',
+    params: { usaAportesVoluntarios: true, nDependientes: 2, usaSaludPrepagada: false }
+  },
+  {
+    id: 'hijo2_salud',
+    nombre: '2 hijos + salud',
+    descripcion: 'Aportes voluntarios + 2 dependientes + medicina prepagada',
+    params: { usaAportesVoluntarios: true, nDependientes: 2, usaSaludPrepagada: true }
+  },
+  {
+    id: 'solo_salud',
+    nombre: 'Solo salud',
+    descripcion: 'Aportes voluntarios + medicina prepagada, sin dependientes',
+    params: { usaAportesVoluntarios: true, nDependientes: 0, usaSaludPrepagada: true }
+  }
+];
+
+
+// ============================================================
+//  FORMATEO Y UI
+// ============================================================
+
+function fmt(n) {
+  return '$' + Math.round(n).toLocaleString('es-CO');
+}
+
+function fmtPct(n) {
+  return (n * 100).toFixed(2) + '%';
+}
+
+function renderApp(config) {
+  const app = document.getElementById('app');
+  const anos = Object.keys(config.anos).sort().reverse();
+  const defaultAno = anos[0];
+
+  app.innerHTML = `
+    <div class="inputs-panel">
+      <div class="field">
+        <label>Año gravable</label>
+        <select id="inp-ano">${anos.map(a =>
+          `<option value="${a}" ${a === defaultAno ? 'selected' : ''}>${a}</option>`
+        ).join('')}</select>
+      </div>
+      <div class="field">
+        <label>Salario mensual</label>
+        <input type="text" id="inp-salario" value="10,000,000" inputmode="numeric">
+        <div class="hint" id="salario-hint"></div>
+      </div>
+      <div class="field">
+        <label>UVT</label>
+        <input type="text" id="inp-uvt" value="" readonly>
+        <div class="hint">Valor de config.js</div>
+      </div>
+      <div class="field">
+        <label>SMLV</label>
+        <input type="text" id="inp-smlv" value="" readonly>
+        <div class="hint">Valor de config.js</div>
+      </div>
+    </div>
+
+    <div class="params-row" id="params-row"></div>
+
+    <div class="results-section">
+      <h2>Comparación de estrategias</h2>
+      <div class="comparison-grid" id="results-grid"></div>
+    </div>
+  `;
+
+  const inpAno = document.getElementById('inp-ano');
+  const inpSalario = document.getElementById('inp-salario');
+  const inpUVT = document.getElementById('inp-uvt');
+  const inpSMLV = document.getElementById('inp-smlv');
+
+  function parseSalario(str) {
+    return parseInt(str.replace(/[^0-9]/g, ''), 10) || 0;
+  }
+
+  function formatInputSalario(val) {
+    return val.toLocaleString('es-CO');
+  }
+
+  function recalcular() {
+    const anoKey = inpAno.value;
+    const anoConfig = config.anos[anoKey];
+    if (!anoConfig) return;
+
+    const estatuto = config.estatutos[anoConfig.estatuto];
+    if (!estatuto) return;
+
+    const uvt = anoConfig.uvt;
+    const smlv = anoConfig.smlv;
+    const salario = parseSalario(inpSalario.value);
+
+    inpUVT.value = fmt(uvt);
+    inpSMLV.value = fmt(smlv);
+
+    document.getElementById('salario-hint').textContent =
+      salario > 0 ? `= ${(salario / uvt).toFixed(1)} UVT/mes` : '';
+
+    // Parámetros derivados
+    const paramsRow = document.getElementById('params-row');
+    paramsRow.innerHTML = `
+      <div class="param">
+        <span class="param-label">Estatuto:</span>
+        <span class="param-value">${anoConfig.estatuto}</span>
+      </div>
+      <div class="param">
+        <span class="param-label">Tope 25%:</span>
+        <span class="param-value">${estatuto.topes.exento_25pct_tope_uvt} UVT = ${fmt(estatuto.topes.exento_25pct_tope_uvt * uvt)}</span>
+      </div>
+      <div class="param">
+        <span class="param-label">Tope total:</span>
+        <span class="param-value">${estatuto.topes.total_rentas_exentas_uvt} UVT = ${fmt(estatuto.topes.total_rentas_exentas_uvt * uvt)}</span>
+      </div>
+      <div class="param">
+        <span class="param-label">+Dep:</span>
+        <span class="param-value">${estatuto.topes.uvt_adicional_por_dependiente} UVT/dep</span>
+      </div>
+    `;
+
+    if (salario <= 0) {
+      document.getElementById('results-grid').innerHTML =
+        '<p style="color: var(--text-muted); grid-column: 1/-1;">Ingresa un salario mensual para ver resultados.</p>';
+      return;
+    }
+
+    // Calcular todas las estrategias
+    const resultados = ESTRATEGIAS.map(e => ({
+      ...e,
+      resultado: calcularEstrategia(salario, uvt, smlv, estatuto, e.params)
+    }));
+
+    // Encontrar la mejor (menor impuesto)
+    let mejorImpuesto = Infinity;
+    let mejorId = '';
+    for (const r of resultados) {
+      if (r.resultado.impuesto < mejorImpuesto) {
+        mejorImpuesto = r.resultado.impuesto;
+        mejorId = r.id;
+      }
+    }
+
+    // Render cards
+    const grid = document.getElementById('results-grid');
+    grid.innerHTML = resultados.map(e => {
+      const r = e.resultado;
+      const isBest = e.id === mejorId;
+      const sinPlanImpuesto = resultados[0].resultado.impuesto;
+      const ahorro = sinPlanImpuesto - r.impuesto;
+
+      return `
+        <div class="strategy-card ${isBest ? 'best' : ''}">
+          <div class="card-title">${e.nombre}</div>
+          <div class="card-subtitle">${e.descripcion}</div>
+
+          <div class="card-metrics">
+            <div class="metric">
+              <span class="metric-label">Retefuente mensual</span>
+              <span class="metric-value highlight">${fmt(r.retefuenteMensual)}</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Tasa efectiva</span>
+              <span class="metric-value ${r.tasaEfectiva > 0.20 ? 'warn' : ''}">${fmtPct(r.tasaEfectiva)}</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Impuesto anual</span>
+              <span class="metric-value">${fmt(r.impuesto)}</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Neto mensual</span>
+              <span class="metric-value green">${fmt(r.netoMensual)}</span>
+            </div>
+          </div>
+
+          ${ahorro > 0 ? `
+          <hr class="card-divider">
+          <div class="metric">
+            <span class="metric-label">Ahorro vs sin planificación</span>
+            <span class="metric-value green">${fmt(ahorro)}/año = ${fmt(ahorro / 12)}/mes</span>
+          </div>
+          ` : ''}
+
+          <button class="detail-toggle" onclick="toggleDetail(this)">▸ Ver detalle</button>
+          <div class="detail-table">
+            <table>
+              <tr><td>Salario anual (12 meses)</td><td>${fmt(r.ingresos.salarioAnual)}</td></tr>
+              <tr><td>Prima de servicios</td><td>${fmt(r.ingresos.prima)}</td></tr>
+              <tr><td>Cesantías (× ${estatuto.topes.factor_cesantias})</td><td>${fmt(r.ingresos.cesantias)}</td></tr>
+              <tr class="subtotal"><td>Ingresos brutos anuales</td><td>${fmt(r.ingresos.total)}</td></tr>
+              <tr><td>Salud + Pensión (empleado)</td><td>-${fmt(r.segSocial.saludPension)}</td></tr>
+              <tr><td>Solidaridad pensional</td><td>-${fmt(r.segSocial.solidaridad)}</td></tr>
+              <tr class="subtotal"><td>Renta Líquida 1</td><td>${fmt(r.rl1)}</td></tr>
+              <tr><td>Rentas exentas (base)</td><td>-${fmt(r.rentasExentas)}</td></tr>
+              <tr><td>Deducción dependientes (×${r.nDep})</td><td>-${fmt(r.deduccionDependientes)}</td></tr>
+              <tr><td>Deducción salud prepagada</td><td>-${fmt(r.deduccionSalud)}</td></tr>
+              <tr><td>25% exento (s/ RL2)</td><td>-${fmt(r.exento25)}</td></tr>
+              <tr><td style="color:var(--text-muted)">Límite 40% RL1</td><td style="color:var(--text-muted)">${fmt(r.limiteExentas40)}</td></tr>
+              <tr><td style="color:var(--text-muted)">Tope UVT (${estatuto.topes.total_rentas_exentas_uvt}+${r.nDep}×${estatuto.topes.uvt_adicional_por_dependiente})</td><td style="color:var(--text-muted)">${fmt(r.topeUVT)}</td></tr>
+              <tr class="subtotal"><td>Total exentas (post-límites)</td><td>${fmt(r.totalExentasFinal)}</td></tr>
+              <tr class="subtotal"><td><strong>Renta Líquida Gravable</strong></td><td><strong>${fmt(r.rlGravable)}</strong></td></tr>
+              <tr class="subtotal"><td>Impuesto de renta anual</td><td>${fmt(r.impuesto)}</td></tr>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Event listeners
+  inpAno.addEventListener('change', recalcular);
+  inpSalario.addEventListener('input', function() {
+    const pos = this.selectionStart;
+    const oldLen = this.value.length;
+    const val = parseSalario(this.value);
+    if (val > 0) {
+      this.value = formatInputSalario(val);
+      const newLen = this.value.length;
+      this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
+    }
+    recalcular();
+  });
+
+  // Initial render
+  recalcular();
+}
+
+function toggleDetail(btn) {
+  const detail = btn.nextElementSibling;
+  detail.classList.toggle('open');
+  btn.textContent = detail.classList.contains('open') ? '▾ Ocultar detalle' : '▸ Ver detalle';
+}
+
+
+// ============================================================
+//  BOOTSTRAP
+// ============================================================
+
+renderApp(CONFIG);
+</script>
+</body>
+</html>
