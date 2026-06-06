@@ -360,6 +360,16 @@ function calcularImpuestoRenta(rentaLiquidaGravable, tablaRenta, uvt) {
   return impuesto;
 }
 
+function calcularExencionCesantias(salarioMensual, uvt, cesantias, cesantiasExentasTable) {
+  const salarioEnUVT = salarioMensual / uvt;
+  for (const tramo of cesantiasExentasTable) {
+    if (tramo.hasta_uvt === null || salarioEnUVT <= tramo.hasta_uvt) {
+      return cesantias * tramo.pct_exento;
+    }
+  }
+  return 0;
+}
+
 /**
  * Calcula el flujo completo para una estrategia dada.
  *
@@ -386,10 +396,11 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
   const limiteExentas40 = topes.limite_rentas_exentas_pct * rl1;
 
   // 5. Rentas exentas según estrategia
-  //    - Cesantías siempre presentes
+  //    - Porción exenta de cesantías según tabla escalonada por salario en UVT
   //    - Aportes voluntarios (AFC / pensión voluntaria) hasta % de ingreso bruto
-  //    - La base de rentas exentas es el MAYOR entre cesantías solas y el total con voluntarios
-  let rentasExentas = ingresos.cesantias; // base: solo cesantías
+  //    - La base de rentas exentas es el MAYOR entre cesantías exentas y el tope voluntario
+  const cesantiasExentas = calcularExencionCesantias(salarioMensual, uvt, ingresos.cesantias, estatuto.cesantias_exentas);
+  let rentasExentas = cesantiasExentas;
 
   if (estrategia.usaAportesVoluntarios) {
     const maxVoluntario = afcConfig.pct_maximo_ingreso * rl1;

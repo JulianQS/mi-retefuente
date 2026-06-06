@@ -268,7 +268,6 @@ If the cascading behavior is desired, the engine would need a `calcularEstrategi
 
 ## Known Limitations
 
-- **Cesantías exentas table not applied.** The `cesantias_exentas` table exists in config.json but is not used in calculations. Cesantías are currently treated as fully exempt. The partial exemption table should be applied based on salary level in UVT.
 - **Health deduction uses maximum.** The `deduccion_medicina_prepagada` always uses the UVT cap as the deduction amount, not an actual premium paid by the user. A future version could let the user input their actual premium.
 - **No intereses de vivienda.** Housing loan interest deduction (up to 100 UVT/month) is not modeled.
 - **No GMF deduction.** The 50% GMF (4×1000 tax) deduction is not modeled.
