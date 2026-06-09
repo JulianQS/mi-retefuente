@@ -49,7 +49,8 @@ estatutos.<ID>
 │   ├── factor_exento_25pct            # the 25% factor itself (0.25)
 │   ├── factor_cesantias               # cesantías multiplier (1.12)
 │   ├── base_max_cotizacion_smlv       # social security contribution ceiling in SMLV (25)
-│   └── aporte_salud_pension_empleado_pct  # employee health+pension rate (0.08)
+│   ├── aporte_salud_pension_empleado_pct  # employee health+pension rate (0.08)
+│   └── tarifa_ganancia_ocasional      # flat rate for occasional gains (0.15, Art. 313 ET)
 │
 ├── solidaridad                   # pension solidarity fund rules
 │   ├── umbral_aplica_smlv             # min salary to contribute (1× SMLV)
@@ -69,8 +70,13 @@ estatutos.<ID>
 ├── deduccion_medicina_prepagada   # voluntary health insurance deduction
 │   └── tope_mensual_uvt               # monthly cap in UVT (16)
 │
-└── aporte_voluntario_pension_afc  # voluntary pension / AFC contributions
-    └── pct_maximo_ingreso             # max as % of net income (0.20)
+├── aporte_voluntario_pension_afc  # AFC / FPV voluntary contributions (Arts. 126-1/126-4 ET)
+│   ├── pct_maximo_ingreso             # max as % of gross annual income (0.30)
+│   └── tope_uvt                       # absolute UVT ceiling (3800)
+│
+└── aporte_voluntario_pension_obligatoria  # AVPO — voluntary extra to mandatory pension (Art. 55 ET)
+    ├── pct_maximo_ingreso             # max as % of cédula general bruta (0.25)
+    └── tope_uvt                       # absolute UVT ceiling (2500)
 ```
 
 ### anos
@@ -110,15 +116,26 @@ anos: {
 
 ## Calculation Engine
 
-All monetary amounts are annual unless noted. The engine is pure-functional: `(salary, uvt, smlv, estatuto, strategy) → result`.
+All monetary amounts are annual unless noted. The engine is pure-functional: `calcularEstrategia(salary, uvt, smlv, estatuto, strategy, adicionales?) → result`.
 
-### Step 1 — Gross Income
+The optional `adicionales` object accepts: `aporteAFCManualMensual`, `avpoMensual`, `rendimientosFinancieros`, `componenteInflacionarioPct`, `gananciasOcasionales`. All default to zero/null when omitted — the engine is fully backward-compatible.
+
+### Step 1 — Labor Gross Income
 
 ```
 salarioAnual = 12 × salarioMensual
-prima        = salarioMensual                        // 1 month
+prima        = salarioMensual                           // 1 month
 cesantias    = salarioMensual × topes.factor_cesantias  // salary × 1.12
 ingresos     = salarioAnual + prima + cesantias
+```
+
+### Step 1a — Cédula General Bruta
+
+Financial yields enter the cédula general; the inflationary component (Art. 38 ET) is INCRNGO:
+
+```
+rendimientoGravable = rendimientosFinancieros × (1 − componenteInflacionarioPct)
+cedulaGeneralBruta  = ingresos + rendimientoGravable
 ```
 
 ### Step 2 — Social Security (employee portion)
@@ -141,26 +158,35 @@ solidaridadAnual = 12 × solidaridadMensual
 segSocial        = saludPension + solidaridadAnual
 ```
 
+### Step 2a — AVPO (Aportes Voluntarios Pensión Obligatoria, Art. 55 ET)
+
+AVPO is INCRNGO — subtracted before the 40% exempt cap, does not consume the AFC/FPV bucket:
+
+```
+avpoAplicado = min(avpoMensual × 12, 0.25 × cedulaGeneralBruta, avpoConfig.tope_uvt × UVT)
+```
+
 ### Step 3 — Net Taxable Income (Renta Líquida 1)
 
 ```
-RL1 = ingresos − segSocial
+RL1 = cedulaGeneralBruta − segSocial − avpoAplicado
 ```
 
 ### Step 4 — Exempt Income (Rentas Exentas)
 
 Varies by strategy. Three components, each with its own cap:
 
-**a) Base exemption:**
+**a) Base exemption (cédula general — AFC / FPV):**
+
+The voluntary contribution bucket (Arts. 126-1/126-4 ET) subsumes cesantías. When an AFC override is provided it is capped at `maxVoluntario = min(0.30 × cedulaGeneralBruta, 3800 × UVT)`:
 
 ```
 if strategy.usaAportesVoluntarios:
-    rentasExentas = max(cesantias, pct_maximo_ingreso × RL1)
+    voluntaryExemptApplied = override != null ? min(override × 12, maxVoluntario) : maxVoluntario
+    rentasExentas = max(cesantias, voluntaryExemptApplied)
 else:
     rentasExentas = cesantias
 ```
-
-The voluntary contribution bucket subsumes cesantías — the total of AFC + pension voluntario + cesantías cannot exceed 20% of RL1, and if cesantías alone exceed 20%, they become the floor.
 
 **b) Dependent deduction:**
 
@@ -215,12 +241,23 @@ impuesto = Σ over brackets:
     base × bracket.tarifa    (if rlGravable > bracket.desde_uvt × UVT)
 ```
 
-### Step 8 — Output Metrics
+### Step 8 — Output Metrics (Cédula General)
 
 ```
-retefuenteMensual = impuesto / 12
-tasaEfectiva      = retefuenteMensual / salarioMensual
-netoMensual       = salarioMensual − retefuenteMensual − segSocial / 12
+retefuenteMensual     = impuesto / 12
+tasaEfectiva          = impuesto / ingresos.total    // vs labor gross (not cédula bruta)
+tasaSegSocial         = segSocial / ingresos.total
+aporteAFCAplicadoMensual = override / 12 (capped) if provided, else optimal aporteMensualAFC
+netoMensual           = salarioMensual − retefuenteMensual − segSocial/12 − aporteAFCAplicadoMensual
+```
+
+### Step 9 — Ganancias Ocasionales (Art. 313 ET)
+
+Separate cédula, flat rate, strategy-independent. Does not affect `retefuenteMensual` or `netoMensual`:
+
+```
+impuestoGananciaOcasional = tarifa_ganancia_ocasional × gananciasOcasionales
+impuestoTotal             = impuesto + impuestoGananciaOcasional
 ```
 
 ---
@@ -271,7 +308,9 @@ If the cascading behavior is desired, the engine would need a `calcularEstrategi
 - **Health deduction uses maximum.** The `deduccion_medicina_prepagada` always uses the UVT cap as the deduction amount, not an actual premium paid by the user. A future version could let the user input their actual premium.
 - **No intereses de vivienda.** Housing loan interest deduction (up to 100 UVT/month) is not modeled.
 - **No GMF deduction.** The 50% GMF (4×1000 tax) deduction is not modeled.
-- **Single income type.** Only models salaried employment income. Does not handle honorarios, dividends, rental income, or capital gains.
+- **Rendimientos financieros are global.** The same rendimientos and componente inflacionario apply to all strategies identically. A per-strategy yield is not modeled.
+- **Ganancias ocasionales have no cost basis.** The engine accepts the net taxable gain directly; it does not compute cost basis or holding period from raw transaction data.
+- **AVPO ceiling is not adjusted for pre-existing mandatory contributions.** The 25% / 2,500 UVT cap on AVPO is applied to the entered amount without adjusting for mandatory pension contributions already paid.
 - **No declaración threshold check.** Does not verify whether the person is required to file a return (declarar renta) based on income/patrimonio thresholds.
 
 ---

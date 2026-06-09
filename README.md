@@ -16,25 +16,30 @@ Open `index.html` in any browser. That's it — no server needed.
 
 4. **Add a comparison** using the **Comparar con** dropdown to see a second strategy side by side. By default *Máxima planificación* is pre-selected here. Leave it on *Sin comparación* to see just one card, or clear both dropdowns to see all 7 strategies at once.
 
-5. **Each card shows:**
+5. **Add optional contributions** in the *Ingresos adicionales* section:
+   - **AVPO mensual** — monthly voluntary extra contribution to mandatory pension (pensión obligatoria). Treated as INCRNGO under Art. 55 ET — reduces taxable income before the 40% cap and does not compete with the AFC/FPV bucket. Capped at 25% of gross annual income or 2,500 UVT, whichever is lower.
+   - **AFC/FPV mensual** — manually set your monthly AFC or voluntary pension contribution instead of using the computed optimum. Leave blank to keep the optimal amount.
+
+6. **Each card shows:**
    - **Retefuente mensual** — the ideal monthly withholding tax.
-   - **Tasa impuesto** — annual income tax as a percentage of total annual income (salary + prima + cesantías).
-   - **Tasa seg. social** — total social security contributions as a percentage of total annual income.
-   - **Aporte AFC/FPV mensual** — the exact monthly amount to contribute to AFC or voluntary pension funds to maximise the tax benefit *(only shown for strategies that use voluntary contributions)*.
-   - **Impuesto anual** — total income tax for the year.
-   - **Neto mensual** — take-home pay after tax, social security, and AFC/FPV contribution.
+   - **Tasa impuesto** — annual income tax as a percentage of total annual labor income (salary + prima + cesantías).
+   - **Tasa seg. social** — total social security contributions as a percentage of total annual labor income.
+   - **AVPO mensual** — applied monthly AVPO contribution *(only shown when an AVPO amount is entered)*.
+   - **Aporte AFC/FPV mensual** — the monthly amount applied to AFC or voluntary pension funds (the override if set, otherwise the computed optimal). Only shown for strategies that use voluntary contributions.
+   - **Impuesto renta anual** — cédula general income tax for the year.
+   - **Neto mensual** — take-home pay after tax, social security, AVPO, and AFC/FPV contributions.
    - **Ahorro vs sin planificación** — how much you save compared to doing nothing.
 
-6. **Look for the green badge** (✦ Menor carga) — it marks the strategy with the lowest tax burden across all 7, regardless of which ones are currently visible.
+7. **Look for the green badge** (✦ Menor carga) — it marks the strategy with the lowest cédula general tax burden across all 7, regardless of which ones are currently visible.
 
-7. **Click "Ver detalle"** on any card to see the full calculation breakdown: income components, social security, exemptions, caps applied, and final taxable income.
+8. **Click "Ver detalle"** on any card to see the full calculation breakdown: income components, social security, AVPO, exemptions, caps applied, and final taxable income.
 
 ## Strategies Explained
 
 | Strategy | What it assumes |
 |----------|----------------|
 | **Sin planificación** | You do nothing. Only mandatory cesantías count as exempt income. |
-| **Máxima planificación** | You contribute the maximum to AFC or voluntary pension funds (up to 20% of net income). |
+| **Máxima planificación** | You contribute the maximum to AFC or voluntary pension funds (up to 30% of gross income / 3,800 UVT). |
 | **1 hijo** | Max voluntary contributions + you declare 1 dependent child. |
 | **1 hijo + salud** | Same as above + you have voluntary health insurance (medicina prepagada). |
 | **2 hijos** | Max voluntary contributions + 2 dependent children. |

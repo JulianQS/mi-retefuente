@@ -387,19 +387,40 @@ function calcularExencionCesantias(salarioMensual, uvt, cesantias, cesantiasExen
  *   - nDependientes: 0, 1, 2
  *   - usaSaludPrepagada: boolean
  */
-function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
+function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia, adicionales = {}) {
+  const {
+    aporteAFCManualMensual = null,
+    avpoMensual = 0,
+    rendimientosFinancieros = 0,
+    componenteInflacionarioPct = 0,
+    gananciasOcasionales = 0
+  } = adicionales;
+
   const { topes, solidaridad: solConfig, tabla_renta: tablaRenta } = estatuto;
   const { deduccion_dependientes: depConfig, deduccion_medicina_prepagada: saludConfig } = estatuto;
-  const { aporte_voluntario_pension_afc: afcConfig } = estatuto;
+  const { aporte_voluntario_pension_afc: afcConfig, aporte_voluntario_pension_obligatoria: avpoConfig } = estatuto;
 
-  // 1. Ingresos
+  // 1. Ingresos laborales
   const ingresos = calcularIngresos(salarioMensual, topes);
+
+  // 1a. Cédula general bruta (ingreso laboral + rendimientos financieros gravables)
+  // El componente inflacionario (Art. 38 ET) es INCRNGO y reduce la porción gravable
+  const rendimientoGravable = rendimientosFinancieros * (1 - componenteInflacionarioPct);
+  const cedulaGeneralBruta = ingresos.total + rendimientoGravable;
 
   // 2. Seguridad Social
   const segSocial = calcularSegSocial(salarioMensual, smlv, topes, solConfig);
 
-  // 3. Renta Líquida 1 (ingreso neto de seguridad social)
-  const rl1 = ingresos.total - segSocial.total;
+  // 2a. Aportes voluntarios a pensión obligatoria (AVPO) — Art. 55 ET: INCRNGO
+  // Se resta antes del límite del 40%, no consume el cupo de rentas exentas
+  const avpoAplicado = Math.min(
+    avpoMensual * 12,
+    avpoConfig.pct_maximo_ingreso * cedulaGeneralBruta,
+    avpoConfig.tope_uvt * uvt
+  );
+
+  // 3. Renta Líquida 1 (cédula general neta de seguridad social y AVPO)
+  const rl1 = cedulaGeneralBruta - segSocial.total - avpoAplicado;
 
   // 4. Límite global de rentas exentas + deducciones
   const limiteExentas40 = topes.limite_rentas_exentas_pct * rl1;
@@ -411,14 +432,17 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
   const cesantiasExentas = calcularExencionCesantias(salarioMensual, uvt, ingresos.cesantias, estatuto.cesantias_exentas);
   let rentasExentas = cesantiasExentas;
   const maxVoluntario = Math.min(
-    afcConfig.pct_maximo_ingreso * ingresos.total,
+    afcConfig.pct_maximo_ingreso * cedulaGeneralBruta,
     afcConfig.tope_uvt * uvt
   );
 
+  let voluntaryExemptApplied = 0;
   if (estrategia.usaAportesVoluntarios) {
-    // Los aportes voluntarios INCLUYEN las cesantías en el bucket de rentas exentas
-    // El total del bucket es hasta el % máximo de RL1
-    rentasExentas = Math.max(rentasExentas, maxVoluntario);
+    // Override manual si se proporcionó, o el tope máximo. El bucket incluye cesantías.
+    voluntaryExemptApplied = aporteAFCManualMensual != null
+      ? Math.min(aporteAFCManualMensual * 12, maxVoluntario)
+      : maxVoluntario;
+    rentasExentas = Math.max(rentasExentas, voluntaryExemptApplied);
   }
 
   // 6. Deducciones adicionales: dependientes
@@ -497,13 +521,25 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
   const tasaEfectiva = ingresos.total > 0 ? impuesto / ingresos.total : 0;
   const tasaSegSocial = ingresos.total > 0 ? segSocial.total / ingresos.total : 0;
 
-  // 19. Ingreso neto mensual (salario - retención - seguridad social - aporte AFC/FPV)
+  // 19. Ingreso neto mensual
+  // El aporte aplicado es el override si se proporcionó (y capado), o el óptimo calculado
   const segSocialMensual = segSocial.total / 12;
-  const netoMensual = salarioMensual - retefuenteMensual - segSocialMensual - aporteMensualAFC;
+  const aporteAFCAplicadoMensual = estrategia.usaAportesVoluntarios
+    ? (aporteAFCManualMensual != null ? Math.min(aporteAFCManualMensual, maxVoluntario / 12) : aporteMensualAFC)
+    : 0;
+  const avpoMensualAplicado = avpoAplicado / 12;
+  const netoMensual = salarioMensual - retefuenteMensual - segSocialMensual - aporteAFCAplicadoMensual - avpoMensualAplicado;
+
+  // 20. Ganancias ocasionales — cédula separada, tarifa plana
+  const impuestoGananciaOcasional = topes.tarifa_ganancia_ocasional * gananciasOcasionales;
+  const impuestoTotal = impuesto + impuestoGananciaOcasional;
 
   return {
     ingresos,
     segSocial,
+    rendimientoGravable,
+    cedulaGeneralBruta,
+    avpoAplicado,
     rl1,
     limiteExentas40,
     rentasExentas,
@@ -522,6 +558,10 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
     tasaEfectiva,
     tasaSegSocial,
     aporteMensualAFC,
+    aporteAFCAplicadoMensual,
+    avpoMensualAplicado,
+    impuestoGananciaOcasional,
+    impuestoTotal,
     netoMensual,
     nDep
   };
@@ -624,6 +664,22 @@ function renderApp(config) {
           </select>
         </div>
       </div>
+
+      <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 1rem;">
+        <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.75rem;">Ingresos adicionales (opcional)</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+          <div class="field">
+            <label>AVPO mensual</label>
+            <input type="text" id="inp-avpo" placeholder="0" inputmode="numeric">
+            <div class="hint">INCRNGO — Art. 55 ET</div>
+          </div>
+          <div class="field">
+            <label>AFC/FPV mensual</label>
+            <input type="text" id="inp-afc-override" placeholder="Óptimo" inputmode="numeric">
+            <div class="hint">Vacío = óptimo calculado</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="params-row" id="params-row"></div>
@@ -638,6 +694,8 @@ function renderApp(config) {
   const inpSalario = document.getElementById('inp-salario');
   const selPrimary = document.getElementById('inp-estrategia-primary');
   const selCompare = document.getElementById('inp-estrategia-compare');
+  const inpAvpo = document.getElementById('inp-avpo');
+  const inpAfcOverride = document.getElementById('inp-afc-override');
 
   function parseSalario(str) {
     return parseInt(str.replace(/[^0-9]/g, ''), 10) || 0;
@@ -658,6 +716,10 @@ function renderApp(config) {
     const uvt = anoConfig.uvt;
     const smlv = anoConfig.smlv;
     const salario = parseSalario(inpSalario.value);
+    const avpoMensual = parseSalario(inpAvpo.value);
+    const afcOverrideRaw = inpAfcOverride.value.trim();
+    const aporteAFCManualMensual = afcOverrideRaw !== '' ? (parseSalario(afcOverrideRaw) || null) : null;
+    const adicionales = { aporteAFCManualMensual, avpoMensual };
 
     document.getElementById('salario-hint').textContent =
       salario > 0 ? `= ${(salario / uvt).toFixed(1)} UVT/mes` : '';
@@ -700,7 +762,7 @@ function renderApp(config) {
     // Calcular todas las estrategias
     const resultados = ESTRATEGIAS.map(e => ({
       ...e,
-      resultado: calcularEstrategia(salario, uvt, smlv, estatuto, e.params)
+      resultado: calcularEstrategia(salario, uvt, smlv, estatuto, e.params, adicionales)
     }));
 
     // Encontrar la mejor (menor impuesto)
@@ -747,13 +809,18 @@ function renderApp(config) {
               <span class="metric-label">Tasa seg. social</span>
               <span class="metric-value">${fmtPct(r.tasaSegSocial)}</span>
             </div>
+            ${r.avpoMensualAplicado > 0 ? `
+            <div class="metric">
+              <span class="metric-label">AVPO mensual</span>
+              <span class="metric-value">${fmt(r.avpoMensualAplicado)}</span>
+            </div>` : ''}
             ${e.params.usaAportesVoluntarios ? `
             <div class="metric">
               <span class="metric-label">Aporte AFC/FPV mensual</span>
-              <span class="metric-value">${fmt(r.aporteMensualAFC)}</span>
+              <span class="metric-value">${fmt(r.aporteAFCAplicadoMensual)}</span>
             </div>` : ''}
             <div class="metric">
-              <span class="metric-label">Impuesto anual</span>
+              <span class="metric-label">Impuesto renta anual</span>
               <span class="metric-value">${fmt(r.impuesto)}</span>
             </div>
             <div class="metric">
@@ -779,6 +846,7 @@ function renderApp(config) {
               <tr class="subtotal"><td>Ingresos brutos anuales</td><td>${fmt(r.ingresos.total)}</td></tr>
               <tr><td>Salud + Pensión (empleado)</td><td>-${fmt(r.segSocial.saludPension)}</td></tr>
               <tr><td>Solidaridad pensional</td><td>-${fmt(r.segSocial.solidaridad)}</td></tr>
+              ${r.avpoAplicado > 0 ? `<tr><td>AVPO — INCRNGO (Art. 55 ET)</td><td>-${fmt(r.avpoAplicado)}</td></tr>` : ''}
               <tr class="subtotal"><td>Renta Líquida 1</td><td>${fmt(r.rl1)}</td></tr>
               <tr><td>Rentas exentas (base)</td><td>-${fmt(r.rentasExentas)}</td></tr>
               <tr><td>Deducción dependientes (×${r.nDep})</td><td>-${fmt(r.deduccionDependientes)}</td></tr>
@@ -807,6 +875,20 @@ function renderApp(config) {
     }
   }
 
+  function makeNumericInput(inp) {
+    inp.addEventListener('input', function() {
+      const pos = this.selectionStart;
+      const oldLen = this.value.length;
+      const val = parseSalario(this.value);
+      if (val > 0) {
+        this.value = formatInputSalario(val);
+        const newLen = this.value.length;
+        this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
+      }
+      recalcular();
+    });
+  }
+
   // Event listeners
   inpAno.addEventListener('change', recalcular);
   selPrimary.addEventListener('change', () => { syncSelectors(); recalcular(); });
@@ -822,6 +904,8 @@ function renderApp(config) {
     }
     recalcular();
   });
+  makeNumericInput(inpAvpo);
+  makeNumericInput(inpAfcOverride);
 
   // Initial render
   syncSelectors();

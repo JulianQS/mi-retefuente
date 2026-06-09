@@ -30,7 +30,8 @@ const CONFIG = {
         factor_exento_25pct: 0.25,
         factor_cesantias: 1.12,
         base_max_cotizacion_smlv: 25,
-        aporte_salud_pension_empleado_pct: 0.08
+        aporte_salud_pension_empleado_pct: 0.08,
+        tarifa_ganancia_ocasional: 0.15       // Art. 313 ET: tarifa general ganancias ocasionales
       },
 
       solidaridad: {
@@ -62,6 +63,11 @@ const CONFIG = {
       aporte_voluntario_pension_afc: {
         pct_maximo_ingreso: 0.30,  // Art. 126-1 / 126-4 ET: FPV + AFC combinado, 30% ingreso laboral anual
         tope_uvt: 3800             // Art. 126-1 / 126-4 ET: tope absoluto en UVT
+      },
+
+      aporte_voluntario_pension_obligatoria: {
+        pct_maximo_ingreso: 0.25,  // Art. 55 ET: INCRNGO, 25% ingreso laboral anual
+        tope_uvt: 2500             // Art. 55 ET: tope absoluto en UVT
       }
     }
   },
