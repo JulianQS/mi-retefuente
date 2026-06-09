@@ -467,7 +467,8 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
   const retefuenteMensual = impuesto / 12;
 
   // 17. Tasa efectiva de retención
-  const tasaEfectiva = salarioMensual > 0 ? retefuenteMensual / salarioMensual : 0;
+  const tasaEfectiva = ingresos.total > 0 ? impuesto / ingresos.total : 0;
+  const tasaSegSocial = ingresos.total > 0 ? segSocial.total / ingresos.total : 0;
 
   // 18. Ingreso neto mensual (salario - retención - seguridad social mensual)
   const segSocialMensual = segSocial.total / 12;
@@ -492,6 +493,7 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
     impuesto,
     retefuenteMensual,
     tasaEfectiva,
+    tasaSegSocial,
     netoMensual,
     nDep
   };
@@ -710,8 +712,12 @@ function renderApp(config) {
               <span class="metric-value highlight">${fmt(r.retefuenteMensual)}</span>
             </div>
             <div class="metric">
-              <span class="metric-label">Tasa efectiva</span>
-              <span class="metric-value ${r.tasaEfectiva > 0.20 ? 'warn' : ''}">${fmtPct(r.tasaEfectiva)}</span>
+              <span class="metric-label">Tasa impuesto</span>
+              <span class="metric-value">${fmtPct(r.tasaEfectiva)}</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Tasa seg. social</span>
+              <span class="metric-value">${fmtPct(r.tasaSegSocial)}</span>
             </div>
             <div class="metric">
               <span class="metric-label">Impuesto anual</span>
