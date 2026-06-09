@@ -60,7 +60,8 @@ const CONFIG = {
       },
 
       aporte_voluntario_pension_afc: {
-        pct_maximo_ingreso: 0.20
+        pct_maximo_ingreso: 0.30,  // Art. 126-1 / 126-4 ET: FPV + AFC combinado, 30% ingreso laboral anual
+        tope_uvt: 3800             // Art. 126-1 / 126-4 ET: tope absoluto en UVT
       }
     }
   },

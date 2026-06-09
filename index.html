@@ -410,9 +410,12 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
   //    - La base de rentas exentas es el MAYOR entre cesantías exentas y el tope voluntario
   const cesantiasExentas = calcularExencionCesantias(salarioMensual, uvt, ingresos.cesantias, estatuto.cesantias_exentas);
   let rentasExentas = cesantiasExentas;
+  const maxVoluntario = Math.min(
+    afcConfig.pct_maximo_ingreso * ingresos.total,
+    afcConfig.tope_uvt * uvt
+  );
 
   if (estrategia.usaAportesVoluntarios) {
-    const maxVoluntario = afcConfig.pct_maximo_ingreso * rl1;
     // Los aportes voluntarios INCLUYEN las cesantías en el bucket de rentas exentas
     // El total del bucket es hasta el % máximo de RL1
     rentasExentas = Math.max(rentasExentas, maxVoluntario);
@@ -457,22 +460,46 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
   const topeUVT = (topes.total_rentas_exentas_uvt + nDep * topes.uvt_adicional_por_dependiente) * uvt;
   const totalExentasFinal = Math.min(totalExentasConPct, topeUVT);
 
-  // 14. Renta Líquida Gravable
+  // 14. Aporte mensual óptimo AFC/FPV
+  // Mínima contribución que maximiza totalExentasFinal sin exceder el bucket statutory.
+  // Caso 1 (25% exento ya topado por UVT al nivel base): cada peso de AFC suma 1:1 → llenar el gap directo.
+  // Caso 2 (25% exento libre): cada peso de AFC reduce exento25 en 0.25 → óptimo = maxVoluntario − C − deducciones.
+  let aporteMensualAFC = 0;
+  if (estrategia.usaAportesVoluntarios) {
+    const baselineSinAFC = cesantiasExentas + deduccionDependientes + deduccionSalud;
+    const exento25SinAFCraw = topes.factor_exento_25pct * Math.max(rl1 - baselineSinAFC, 0);
+    const capTotal = Math.min(limiteExentas40, topeUVT);
+    let afcOptimalAnual;
+    if (exento25SinAFCraw >= tope25UVT) {
+      // Caso 1: exento25 ya topado → gap directo 1:1
+      const gap = Math.max(0, capTotal - (baselineSinAFC + tope25UVT));
+      afcOptimalAnual = Math.min(maxVoluntario - cesantiasExentas, gap);
+    } else {
+      // Caso 2: exento25 libre → tope 40% es la restricción activa.
+      // Cada peso de AFC reduce exento25 en factor_exento_25pct → efecto neto por peso = (1 - factor_exento_25pct).
+      // Despejando: baselineSinAFC + x = (limiteExentas40 - factor_exento_25pct * rl1) / (1 - factor_exento_25pct)
+      const fillTo40cap = (limiteExentas40 - topes.factor_exento_25pct * rl1) / (1 - topes.factor_exento_25pct) - baselineSinAFC;
+      afcOptimalAnual = Math.max(0, Math.min(maxVoluntario - cesantiasExentas, fillTo40cap));
+    }
+    aporteMensualAFC = afcOptimalAnual / 12;
+  }
+
+  // 15. Renta Líquida Gravable
   const rlGravable = Math.max(rl1 - totalExentasFinal, 0);
 
-  // 15. Impuesto de renta
+  // 16. Impuesto de renta
   const impuesto = calcularImpuestoRenta(rlGravable, tablaRenta, uvt);
 
-  // 16. Retención en la fuente mensual ideal
+  // 17. Retención en la fuente mensual ideal
   const retefuenteMensual = impuesto / 12;
 
-  // 17. Tasa efectiva de retención
+  // 18. Tasa efectiva de retención
   const tasaEfectiva = ingresos.total > 0 ? impuesto / ingresos.total : 0;
   const tasaSegSocial = ingresos.total > 0 ? segSocial.total / ingresos.total : 0;
 
-  // 18. Ingreso neto mensual (salario - retención - seguridad social mensual)
+  // 19. Ingreso neto mensual (salario - retención - seguridad social - aporte AFC/FPV)
   const segSocialMensual = segSocial.total / 12;
-  const netoMensual = salarioMensual - retefuenteMensual - segSocialMensual;
+  const netoMensual = salarioMensual - retefuenteMensual - segSocialMensual - aporteMensualAFC;
 
   return {
     ingresos,
@@ -494,6 +521,7 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia) {
     retefuenteMensual,
     tasaEfectiva,
     tasaSegSocial,
+    aporteMensualAFC,
     netoMensual,
     nDep
   };
@@ -719,6 +747,11 @@ function renderApp(config) {
               <span class="metric-label">Tasa seg. social</span>
               <span class="metric-value">${fmtPct(r.tasaSegSocial)}</span>
             </div>
+            ${e.params.usaAportesVoluntarios ? `
+            <div class="metric">
+              <span class="metric-label">Aporte AFC/FPV mensual</span>
+              <span class="metric-value">${fmt(r.aporteMensualAFC)}</span>
+            </div>` : ''}
             <div class="metric">
               <span class="metric-label">Impuesto anual</span>
               <span class="metric-value">${fmt(r.impuesto)}</span>

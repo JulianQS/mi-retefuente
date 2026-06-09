@@ -18,9 +18,11 @@ Open `index.html` in any browser. That's it — no server needed.
 
 5. **Each card shows:**
    - **Retefuente mensual** — the ideal monthly withholding tax.
-   - **Tasa efectiva** — withholding as a percentage of your salary.
+   - **Tasa impuesto** — annual income tax as a percentage of total annual income (salary + prima + cesantías).
+   - **Tasa seg. social** — total social security contributions as a percentage of total annual income.
+   - **Aporte AFC/FPV mensual** — the exact monthly amount to contribute to AFC or voluntary pension funds to maximise the tax benefit *(only shown for strategies that use voluntary contributions)*.
    - **Impuesto anual** — total income tax for the year.
-   - **Neto mensual** — take-home pay after tax and social security.
+   - **Neto mensual** — take-home pay after tax, social security, and AFC/FPV contribution.
    - **Ahorro vs sin planificación** — how much you save compared to doing nothing.
 
 6. **Look for the green badge** (✦ Menor carga) — it marks the strategy with the lowest tax burden across all 7, regardless of which ones are currently visible.
