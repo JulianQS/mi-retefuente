@@ -16,7 +16,7 @@ Open `index.html` in any browser. That's it — no server needed.
 
 4. **Add a comparison** using the **Comparar con** dropdown to see a second strategy side by side. By default *Máxima planificación* is pre-selected here. Leave it on *Sin comparación* to see just one card, or clear both dropdowns to see all 7 strategies at once.
 
-5. **Add optional contributions** in the *Ingresos adicionales* section:
+5. **Add optional contributions** in the *Aportes voluntarios* section:
    - **AVPO mensual** — monthly voluntary extra contribution to mandatory pension (pensión obligatoria). Treated as INCRNGO under Art. 55 ET — reduces taxable income before the 40% cap and does not compete with the AFC/FPV bucket. Capped at 25% of gross annual income or 2,500 UVT, whichever is lower.
    - **AFC/FPV mensual** — manually set your monthly AFC or voluntary pension contribution instead of using the computed optimum. Leave blank to keep the optimal amount.
 
