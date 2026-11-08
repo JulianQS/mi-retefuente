@@ -294,7 +294,7 @@
 <body>
 <div class="container">
   <header>
-    <h1>Mi <span>Retefuente</span></h1>
+    <h1>Mi <span>Retefuente</span> <small id="app-version" style="font-size:0.75rem;color:var(--text-muted);font-weight:400;"></small></h1>
     <p>Comparador de estrategias de planificación tributaria — Retención en la fuente e impuesto de renta, Colombia</p>
   </header>
 
@@ -306,6 +306,9 @@
 // ============================================================
 //  MOTOR DE CÁLCULO TRIBUTARIO
 // ============================================================
+
+// Versión de la aplicación (semver). Subir al publicar y crear tag git vX.Y.Z.
+const APP_VERSION = '1.0.0';
 
 // Intereses sobre cesantías: 12% anual sobre el saldo (Ley 52 de 1975)
 const TASA_INTERESES_CESANTIAS = 0.12;
@@ -641,6 +644,7 @@ function fmtPct(n) {
 }
 
 function renderApp(config) {
+  document.getElementById('app-version').textContent = 'v' + APP_VERSION;
   const app = document.getElementById('app');
   const anos = Object.keys(config.anos).sort().reverse();
   const defaultAno = anos[0];
