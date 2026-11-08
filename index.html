@@ -307,15 +307,24 @@
 //  MOTOR DE CÁLCULO TRIBUTARIO
 // ============================================================
 
+// Intereses sobre cesantías: 12% anual sobre el saldo (Ley 52 de 1975)
+const TASA_INTERESES_CESANTIAS = 0.12;
+
 /**
  * Calcula componentes de ingreso anual
+ *  - cesantiasManual: valor de cesantías pagadas según la declaración de renta.
+ *    Si es null/undefined se usa la estimación salario × factor_cesantias.
+ *  - intereses: 12% de cesantías manuales, o null si no se ingresó cesantías.
  */
-function calcularIngresos(salarioMensual, topes) {
+function calcularIngresos(salarioMensual, topes, cesantiasManual = null) {
   const salarioAnual = 12 * salarioMensual;
   const prima = salarioMensual;                           // 1 mes
-  const cesantias = salarioMensual * topes.factor_cesantias; // salario × 1.12
-  const total = salarioAnual + prima + cesantias;
-  return { salarioMensual, salarioAnual, prima, cesantias, total };
+  const esManual = cesantiasManual !== null && cesantiasManual !== undefined;
+  const cesantias = esManual ? cesantiasManual : salarioMensual * topes.factor_cesantias; // salario × 1.12
+  const intereses = esManual ? cesantiasManual * TASA_INTERESES_CESANTIAS : null;
+  // Intereses de cesantías son ingreso laboral gravable (salario-like)
+  const total = salarioAnual + prima + cesantias + (intereses ?? 0);
+  return { salarioMensual, salarioAnual, prima, cesantias, cesantiasEstimada: !esManual, intereses, total };
 }
 
 /**
@@ -391,6 +400,7 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia, adi
   const {
     aporteAFCManualMensual = null,
     avpoMensual = 0,
+    cesantiasManual = null,
     rendimientosFinancieros = 0,
     componenteInflacionarioPct = 0,
     gananciasOcasionales = 0
@@ -401,7 +411,7 @@ function calcularEstrategia(salarioMensual, uvt, smlv, estatuto, estrategia, adi
   const { aporte_voluntario_pension_afc: afcConfig, aporte_voluntario_pension_obligatoria: avpoConfig } = estatuto;
 
   // 1. Ingresos laborales
-  const ingresos = calcularIngresos(salarioMensual, topes);
+  const ingresos = calcularIngresos(salarioMensual, topes, cesantiasManual);
 
   // 1a. Cédula general bruta (ingreso laboral + rendimientos financieros gravables)
   // El componente inflacionario (Art. 38 ET) es INCRNGO y reduce la porción gravable
@@ -648,6 +658,11 @@ function renderApp(config) {
         <input type="text" id="inp-salario" value="7,500,000" inputmode="numeric">
         <div class="hint" id="salario-hint"></div>
       </div>
+      <div class="field">
+        <label>Cesantías pagadas en el año (opcional)</label>
+        <input type="text" id="inp-cesantias" placeholder="Estimado" inputmode="numeric">
+        <div class="hint" id="cesantias-hint"></div>
+      </div>
       <div style="display:flex;flex-direction:column;gap:0.75rem;">
         <div class="field">
           <label>Estrategia</label>
@@ -696,6 +711,17 @@ function renderApp(config) {
   const selCompare = document.getElementById('inp-estrategia-compare');
   const inpAvpo = document.getElementById('inp-avpo');
   const inpAfcOverride = document.getElementById('inp-afc-override');
+  const inpCesantias = document.getElementById('inp-cesantias');
+
+  // Devuelve { valor, estado }: valor = número o null (estimación);
+  // estado = 'estimada' | 'manual' | 'invalida'
+  function parseCesantias(str) {
+    const raw = str.trim();
+    if (raw === '') return { valor: null, estado: 'estimada' };
+    // Solo dígitos y separadores de miles/decimales; sin signos negativos ni letras
+    if (!/^\$?\s*[0-9][0-9.,\s]*$/.test(raw)) return { valor: null, estado: 'invalida' };
+    return { valor: parseSalario(raw), estado: 'manual' };
+  }
 
   function parseSalario(str) {
     return parseInt(str.replace(/[^0-9]/g, ''), 10) || 0;
@@ -719,10 +745,18 @@ function renderApp(config) {
     const avpoMensual = parseSalario(inpAvpo.value);
     const afcOverrideRaw = inpAfcOverride.value.trim();
     const aporteAFCManualMensual = afcOverrideRaw !== '' ? (parseSalario(afcOverrideRaw) || null) : null;
-    const adicionales = { aporteAFCManualMensual, avpoMensual };
+    const cesantiasInput = parseCesantias(inpCesantias.value);
+    const cesantiasManual = cesantiasInput.estado === 'manual' ? cesantiasInput.valor : null;
+    const adicionales = { aporteAFCManualMensual, avpoMensual, cesantiasManual };
 
     document.getElementById('salario-hint').textContent =
       salario > 0 ? `= ${(salario / uvt).toFixed(1)} UVT/mes` : '';
+
+    const cesantiasHint = document.getElementById('cesantias-hint');
+    cesantiasHint.textContent =
+      cesantiasInput.estado === 'invalida' ? 'Valor no válido: se usa la estimación.' :
+      cesantiasInput.estado === 'estimada' ? 'Estimado con las cifras de este año (salario × factor). Puede diferir de la declaración de renta.' :
+      'Valor de la declaración de renta. Intereses = 12% de este valor.';
 
     // Parámetros derivados
     const paramsRow = document.getElementById('params-row');
@@ -842,7 +876,8 @@ function renderApp(config) {
             <table>
               <tr><td>Salario anual (12 meses)</td><td>${fmt(r.ingresos.salarioAnual)}</td></tr>
               <tr><td>Prima de servicios</td><td>${fmt(r.ingresos.prima)}</td></tr>
-              <tr><td>Cesantías (× ${estatuto.topes.factor_cesantias})</td><td>${fmt(r.ingresos.cesantias)}</td></tr>
+              <tr><td>${r.ingresos.cesantiasEstimada ? `Cesantías estimadas (× ${estatuto.topes.factor_cesantias})` : 'Cesantías (declaración de renta)'}</td><td>${fmt(r.ingresos.cesantias)}</td></tr>
+              ${r.ingresos.intereses !== null ? `<tr><td>Intereses de cesantías (12%)</td><td>${fmt(r.ingresos.intereses)}</td></tr>` : ''}
               <tr class="subtotal"><td>Ingresos brutos anuales</td><td>${fmt(r.ingresos.total)}</td></tr>
               <tr><td>Salud + Pensión (empleado)</td><td>-${fmt(r.segSocial.saludPension)}</td></tr>
               <tr><td>Solidaridad pensional</td><td>-${fmt(r.segSocial.solidaridad)}</td></tr>
@@ -906,6 +941,8 @@ function renderApp(config) {
   });
   makeNumericInput(inpAvpo);
   makeNumericInput(inpAfcOverride);
+  // Cesantías: sin reformatear, para que la validación vea signos y letras
+  inpCesantias.addEventListener('input', recalcular);
 
   // Initial render
   syncSelectors();

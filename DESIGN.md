@@ -118,16 +118,19 @@ anos: {
 
 All monetary amounts are annual unless noted. The engine is pure-functional: `calcularEstrategia(salary, uvt, smlv, estatuto, strategy, adicionales?) → result`.
 
-The optional `adicionales` object accepts: `aporteAFCManualMensual`, `avpoMensual`, `rendimientosFinancieros`, `componenteInflacionarioPct`, `gananciasOcasionales`. All default to zero/null when omitted — the engine is fully backward-compatible.
+The optional `adicionales` object accepts: `aporteAFCManualMensual`, `avpoMensual`, `cesantiasManual`, `rendimientosFinancieros`, `componenteInflacionarioPct`, `gananciasOcasionales`. All default to zero/null when omitted — the engine is fully backward-compatible.
 
 ### Step 1 — Labor Gross Income
 
 ```
 salarioAnual = 12 × salarioMensual
 prima        = salarioMensual                           // 1 month
-cesantias    = salarioMensual × topes.factor_cesantias  // salary × 1.12
-ingresos     = salarioAnual + prima + cesantias
+cesantias    = cesantiasManual ?? (salarioMensual × topes.factor_cesantias)  // salary × 1.12 when blank
+intereses    = cesantiasManual × 0.12                   // Ley 52 de 1975; null when cesantiasManual is blank
+ingresos     = salarioAnual + prima + cesantias + intereses  // intereses = 0 when cesantiasManual is blank
 ```
+
+**Cesantías input (optional).** The UI accepts the cesantías amount paid in the year, as shown on the declaración de renta. When it is blank, `cesantias` is the estimate from this year's salary (`× 1.12`), and the UI says it may differ from the renta. When it is filled, that value is used exactly and interest is derived from it. Interest is taxable labor income, so it is included in `ingresos` and shown as its own line in the breakdown. Invalid entries (negative numbers or text) are ignored and the estimate is used, with a message.
 
 ### Step 1a — Cédula General Bruta
 
@@ -311,6 +314,7 @@ If the cascading behavior is desired, the engine would need a `calcularEstrategi
 - **Rendimientos financieros are global.** The same rendimientos and componente inflacionario apply to all strategies identically. A per-strategy yield is not modeled.
 - **Ganancias ocasionales have no cost basis.** The engine accepts the net taxable gain directly; it does not compute cost basis or holding period from raw transaction data.
 - **AVPO ceiling is not adjusted for pre-existing mandatory contributions.** The 25% / 2,500 UVT cap on AVPO is applied to the entered amount without adjusting for mandatory pension contributions already paid.
+- **Cesantías estimate uses this year's salary when blank.** Without a manual cesantías value, the engine uses `salario × factor_cesantias` for the entered year. The declaración de renta reports cesantías paid in the year, which are based on the previous year's service, so the estimate can differ from the form. The UI states this; entering the renta value removes the gap.
 - **No declaración threshold check.** Does not verify whether the person is required to file a return (declarar renta) based on income/patrimonio thresholds.
 
 ---
